@@ -4,6 +4,7 @@ using DAL.Repositories.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 namespace BEPeer.Controllers
@@ -18,10 +19,69 @@ namespace BEPeer.Controllers
             _userServices = userServices;
         }
 
-        [Authorize(Roles = "admin")]
         [Route("register")]
         [HttpPost]
         public async Task<IActionResult> Register(ReqRegisterUserDto register)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Any())
+                        .Select(x => new
+                        {
+                            Field = x.Key,
+                            Messages = x.Value.Errors.Select(e => e.ErrorMessage).ToList()
+                        }).ToList();
+                    var errorMessage = new StringBuilder("Validation error occured!");
+                    return BadRequest(new ResBaseDto<object>
+                    {
+                        Success = false,
+                        Message = errorMessage.ToString(),
+                        Data = errors
+                    });
+                };
+                if(register.Role == "admin")
+                {
+                    throw new ResErrorDto
+                    {
+                        Message = "You can't register as admin",
+                        StatusCode = StatusCodes.Status400BadRequest
+                    };
+                }
+                var user = await _userServices.Register(register);
+                return Ok(new ResBaseDto<object>
+                {
+                    Success = true,
+                    Message = "User registered successfully",
+                    Data = user
+                });
+            }
+            catch (ResErrorDto ex)
+            {
+                return StatusCode(ex.StatusCode, new ResBaseDto<object>
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    Data = null,
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new ResBaseDto<string>
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    Data = null
+                });
+            }
+        }
+
+        [Authorize(Roles = "admin")]
+        [Route("add-user")]
+        [HttpPost]
+        public async Task<IActionResult> AddUser(ReqRegisterUserDto register)
         {
             try
             {
@@ -287,7 +347,6 @@ namespace BEPeer.Controllers
                     Data = null
                 });
             }
-
         }
     }
 }
