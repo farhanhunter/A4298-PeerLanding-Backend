@@ -208,7 +208,7 @@ namespace BEPeer.Controllers
         {
             try
             {
-                if (!ModelState.IsValid)
+                if (!ModelState.IsValid) 
                 {
                     var errors = ModelState
                         .Where(x => x.Value.Errors.Any())
