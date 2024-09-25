@@ -78,6 +78,7 @@ builder.Services.AddDbContext<P2plandingContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
 builder.Services.AddScoped<IUserServices, UserServices>();
+builder.Services.AddScoped<ILoanServices, LoanServices>();
 
 var app = builder.Build();
 
