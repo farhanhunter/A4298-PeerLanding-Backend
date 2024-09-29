@@ -9,6 +9,9 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
+builder.Logging.AddConsole();
+
 // Add services to the container.
 
 builder.Services.AddControllers()
@@ -78,7 +81,8 @@ builder.Services.AddDbContext<P2plandingContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
 builder.Services.AddScoped<IUserServices, UserServices>();
-builder.Services.AddScoped<ILoanServices, LoanServices>();
+builder.Services.AddScoped<ILoanService, LoanServices>();
+builder.Services.AddScoped<ILenderServices, LenderServices>();
 
 var app = builder.Build();
 

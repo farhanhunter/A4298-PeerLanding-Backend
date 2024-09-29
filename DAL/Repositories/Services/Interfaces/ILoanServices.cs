@@ -9,13 +9,11 @@ using System.Threading.Tasks;
 
 namespace DAL.Repositories.Services.Interfaces
 {
-    public interface ILoanServices
+    public interface ILoanService
     {
-        Task<string> CreateLoan(ReqLoanUserDto loan);
-
-        Task<string> UpdateLoan(string borrowerId, ReqUpdateLoanDto reqUpdateLoan);
-
-        Task<List<ResListLoanDto>> GetLoans(string status = null);
-        Task<List<ResListLoanDto>> LoanList();
+        Task<ResBaseDto<string>> CreateLoan(ReqLoanUserDto loan);
+        Task<ResBaseDto<List<ResListLoanDto>>> GetLoans(string status = null);
+        Task<ResBaseDto<List<ResListLoanDto>>> LoanList();
+        Task<ResBaseDto<string>> UpdateLoan(string id, ReqUpdateLoanDto reqUpdateLoan);
     }
 }

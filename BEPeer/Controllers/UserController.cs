@@ -34,49 +34,48 @@ namespace BEPeer.Controllers
                             Field = x.Key,
                             Messages = x.Value.Errors.Select(e => e.ErrorMessage).ToList()
                         }).ToList();
-                    var errorMessage = new StringBuilder("Validation error occured!");
                     return BadRequest(new ResBaseDto<object>
                     {
                         Success = false,
-                        Message = errorMessage.ToString(),
+                        Message = "Validation error occurred!",
                         Data = errors
                     });
-                };
-                if(register.Role == "admin")
-                {
-                    throw new ResErrorDto
-                    {
-                        Message = "You can't register as admin",
-                        StatusCode = StatusCodes.Status400BadRequest
-                    };
                 }
-                var user = await _userServices.Register(register);
+                if (register.Role.ToLower() == "admin")
+                {
+                    return BadRequest(new ResBaseDto<object>
+                    {
+                        Success = false,
+                        Message = "You can't register as admin",
+                        Data = null
+                    });
+                }
+
+                var userName = await _userServices.Register(register);
                 return Ok(new ResBaseDto<object>
                 {
                     Success = true,
                     Message = "User registered successfully",
-                    Data = user
-                });
-            }
-            catch (ResErrorDto ex)
-            {
-                return StatusCode(ex.StatusCode, new ResBaseDto<object>
-                {
-                    Success = false,
-                    Message = ex.Message,
-                    Data = null,
+                    Data = userName
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new ResBaseDto<string>
+                Console.WriteLine($"An error occurred during registration: {ex}");
+                var statusCode = (ex is ResErrorDto resError) ? resError.StatusCode : StatusCodes.Status500InternalServerError;
+                var message = (ex is ResErrorDto) ? ex.Message : "An unexpected error occurred";
+
+                return StatusCode(statusCode, new ResBaseDto<string>
                 {
                     Success = false,
-                    Message = ex.Message,
+                    Message = message,
                     Data = null
                 });
             }
         }
+
+
+
 
         [Authorize(Roles = "admin")]
         [Route("add-user")]
@@ -94,7 +93,7 @@ namespace BEPeer.Controllers
                             Field = x.Key,
                             Messages = x.Value.Errors.Select(e => e.ErrorMessage).ToList()
                         }).ToList();
-                    var errorMessage = new StringBuilder("Validation error occured!");
+                    var errorMessage = new StringBuilder("Validation error occurred!");
                     return BadRequest(new ResBaseDto<object>
                     {
                         Success = false,
@@ -102,12 +101,12 @@ namespace BEPeer.Controllers
                         Data = errors
                     });
                 };
-                var user = await _userServices.Register(register);
+                var userName = await _userServices.Register(register);
                 return Ok(new ResBaseDto<object>
                 {
                     Success = true,
                     Message = "User registered successfully",
-                    Data = user
+                    Data = userName
                 });
             }
             catch (ResErrorDto ex)
@@ -141,7 +140,7 @@ namespace BEPeer.Controllers
                 return Ok(new ResBaseDto<List<ResUserDto>>
                 {
                     Success = true,
-                    Message = "User fetched succesfully",
+                    Message = "Users fetched successfully",
                     Data = users
                 });
             }
@@ -180,7 +179,7 @@ namespace BEPeer.Controllers
                             Field = x.Key,
                             Messages = x.Value.Errors.Select(e => e.ErrorMessage).ToList()
                         }).ToList();
-                    var errorMessage = new StringBuilder("Validation error occured!");
+                    var errorMessage = new StringBuilder("Validation error occurred!");
                     return BadRequest(new ResBaseDto<object>
                     {
                         Success = false,
@@ -207,19 +206,10 @@ namespace BEPeer.Controllers
             }
             catch (Exception ex)
             {
-                if (ex.Message == "Invalid Email or Password")
-                {
-                    return StatusCode(StatusCodes.Status401Unauthorized, new ResBaseDto<object>
-                    {
-                        Success = false,
-                        Message = ex.Message,
-                        Data = null
-                    });
-                }
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResBaseDto<string>
                 {
                     Success = false,
-                    Message = ex.Message,
+                    Message = "An unexpected error occurred. Please try again later.",
                     Data = null
                 });
             }
@@ -232,7 +222,6 @@ namespace BEPeer.Controllers
         {
             try
             {
-                await _userServices.GetUserById(id);
                 await _userServices.DeleteUserById(id);
                 return Ok(new ResBaseDto<object>
                 {
@@ -255,7 +244,7 @@ namespace BEPeer.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResBaseDto<string>
                 {
                     Success = false,
-                    Message = ex.Message,
+                    Message = "An unexpected error occurred. Please try again later.",
                     Data = null
                 });
             }
@@ -268,7 +257,7 @@ namespace BEPeer.Controllers
         {
             try
             {
-                if (!ModelState.IsValid) 
+                if (!ModelState.IsValid)
                 {
                     var errors = ModelState
                         .Where(x => x.Value.Errors.Any())
@@ -277,7 +266,7 @@ namespace BEPeer.Controllers
                             Field = x.Key,
                             Messages = x.Value.Errors.Select(e => e.ErrorMessage).ToList()
                         }).ToList();
-                    var errorMessage = new StringBuilder("Validation error occured!");
+                    var errorMessage = new StringBuilder("Validation error occurred!");
                     return BadRequest(new ResBaseDto<object>
                     {
                         Success = false,
@@ -285,7 +274,6 @@ namespace BEPeer.Controllers
                         Data = errors
                     });
                 };
-                await _userServices.GetUserById(id);
                 var user = await _userServices.UpdateUserById(id, dto);
                 return Ok(new ResBaseDto<object>
                 {
@@ -308,11 +296,12 @@ namespace BEPeer.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResBaseDto<string>
                 {
                     Success = false,
-                    Message = ex.Message,
+                    Message = "An unexpected error occurred. Please try again later.",
                     Data = null
                 });
             }
         }
+
 
         [Authorize(Roles = "admin")]
         [HttpGet]
@@ -343,7 +332,7 @@ namespace BEPeer.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResBaseDto<string>
                 {
                     Success = false,
-                    Message = ex.Message,
+                    Message = "An unexpected error occurred. Please try again later.",
                     Data = null
                 });
             }

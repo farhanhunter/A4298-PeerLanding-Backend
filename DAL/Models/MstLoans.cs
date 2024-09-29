@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -12,11 +13,11 @@ namespace DAL.Models
     public class MstLoans
     {
         [Key]
-
+        [Column("id")]
         public string id { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
-        [ForeignKey("User")]
+        [ForeignKey("Borrower")]
         [Column("borrower_id")]
         public string BorrowerId { get; set; }
 
@@ -32,9 +33,22 @@ namespace DAL.Models
         [Column("duration_month")]
         public int Duration { get; set; }
 
+        private string _status = "requested";
+
         [Required]
         [Column("status")]
-        public string Status { get; set; } = "requested";
+        public string Status
+        {
+            get => _status;
+            set
+            {
+                if (value != "requested" && value != "funded" && value != "repaid")
+                {
+                    throw new ArgumentException("Invalid status value");
+                }
+                _status = value;
+            }
+        }
 
         [Required]
         [Column("created_at")]
@@ -42,8 +56,9 @@ namespace DAL.Models
 
         [Required]
         [Column("updated_at")]
-        public DateTime UpdatedAt { get; set;} = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-        public MstUser User { get; set; }
+        public virtual MstUser Borrower { get; set; }
     }
+
 }

@@ -15,31 +15,37 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace DAL.Repositories.Services
 {
     public class UserServices : IUserServices
     {
         private readonly P2plandingContext _context;
+        private readonly ILogger<UserServices> _logger;
+
         private readonly IConfiguration _configuration;
-        public UserServices(P2plandingContext context, IConfiguration configuration)
+        public UserServices(P2plandingContext context, IConfiguration configuration, ILogger<UserServices> logger)
         {
             _context = context;
             _configuration = configuration;
+            _logger = logger;
         }
 
         public async Task<List<ResUserDto>> GetAllUsers()
         {
             return await _context.MstUsers.Select(
-                user => new ResUserDto
-                {
-                    Id = user.Id,
-                    Name = user.Name,
-                    Email = user.Email,
-                    Role = user.Role,
-                    Balance = user.Balance
-                }
-            ).Where(ResBaseDto => ResBaseDto.Role != "admin").ToListAsync();
+            user => new ResUserDto
+            {
+            Id = user.Id,
+            Name = user.Name,
+            Email = user.Email,
+            Role = user.Role,
+            Balance = user.Balance,
+            CreatedAt = user.CreatedAt,
+            UpdatedAt = user.UpdatedAt
+            }
+                ).Where(ResBaseDto => ResBaseDto.Role != "admin").ToListAsync();
         }
 
         public async Task<ResLoginDto> Login(ReqLoginDto login)
@@ -64,34 +70,64 @@ namespace DAL.Repositories.Services
             }
             return new ResLoginDto
             {
-                Token = GenerateJwtToken(user)
+                Token = GenerateJwtToken(user),
+                Id = user.Id,
+                Name = user.Name,
+                Email = user.Email,
+                Role = user.Role
             };
         }
 
         public async Task<string> Register(ReqRegisterUserDto register)
         {
-            var isAnyEmail = await _context.MstUsers.SingleOrDefaultAsync(x => x.Email == register.Email);
-            if (isAnyEmail !=null)
+            try
             {
-               throw new ResErrorDto {
-                    Message = "Email already used",
-                    StatusCode = StatusCodes.Status400BadRequest
-               };
+                _logger.LogInformation($"Attempting to register user with email: {register.Email}");
+
+                var isAnyEmail = await _context.MstUsers.SingleOrDefaultAsync(x => x.Email == register.Email);
+                if (isAnyEmail != null)
+                {
+                    _logger.LogWarning($"Registration failed: Email {register.Email} already in use");
+                    throw new ResErrorDto
+                    {
+                        Message = "Email already used",
+                        StatusCode = StatusCodes.Status400BadRequest
+                    };
+                }
+
+                if (register.Role != "borrower" && register.Role != "lender")
+                {
+                    _logger.LogWarning($"Registration failed: Invalid role {register.Role} for email {register.Email}");
+                    throw new ResErrorDto
+                    {
+                        Message = "Invalid role. Only 'borrower' or 'lender' are allowed.",
+                        StatusCode = StatusCodes.Status400BadRequest
+                    };
+                }
+
+                var user = new MstUser
+                {
+                    Name = register.Name,
+                    Email = register.Email,
+                    Password = BCrypt.Net.BCrypt.HashPassword(register.Password),
+                    Role = register.Role,
+                    Balance = register.Balance ?? 0
+                };
+
+                await _context.MstUsers.AddAsync(user);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"User registered successfully: {user.Email}");
+
+                return user.Name;
             }
-            var user = new MstUser
+            catch (Exception ex)
             {
-                Name = register.Name,
-                Email = register.Email,
-                Password = BCrypt.Net.BCrypt.HashPassword(register.Password),
-                Role = register.Role,
-                Balance = register.Balance ?? 0
-            };
-
-            await _context.MstUsers.AddAsync(user);
-            await _context.SaveChangesAsync();
-
-            return user.Name;
+                _logger.LogError(ex, $"An error occurred while registering user: {register.Email}");
+                throw;
+            }
         }
+
 
         public string GenerateJwtToken(MstUser user)
         {
@@ -135,7 +171,9 @@ namespace DAL.Repositories.Services
                 Name = user.Name,
                 Email = user.Email,
                 Role = user.Role,
-                Balance = user.Balance
+                Balance = user.Balance,
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt
             };
             return result;
         }
@@ -148,7 +186,7 @@ namespace DAL.Repositories.Services
         public async Task<ResUserDto> UpdateUserById(string id, ReqEditUserDto dto)
         {
             var user = await _context.MstUsers.SingleOrDefaultAsync(x => x.Id == id);
-            if(user == null)
+            if (user == null)
             {
                 throw new ResErrorDto
                 {
@@ -156,18 +194,33 @@ namespace DAL.Repositories.Services
                     StatusCode = StatusCodes.Status404NotFound
                 };
             }
+
+            if (dto.Role != "borrower" && dto.Role != "lender")
+            {
+                throw new ResErrorDto
+                {
+                    Message = "Invalid role. Only 'borrower' or 'lender' are allowed.",
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
             user.Name = dto.Name;
             user.Role = dto.Role;
             user.Balance = dto.Balance ?? user.Balance;
+            user.UpdatedAt = DateTime.Now;
+
             _context.MstUsers.Update(user);
             await _context.SaveChangesAsync();
+
             return new ResUserDto
             {
                 Id = user.Id,
                 Name = user.Name,
                 Email = user.Email,
                 Role = user.Role,
-                Balance = user.Balance
+                Balance = user.Balance,
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt
             };
         }
     }

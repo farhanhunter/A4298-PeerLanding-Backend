@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(P2plandingContext))]
-    [Migration("20240925022859_TrnFundingss")]
-    partial class TrnFundingss
+    [Migration("20240929145537_UpdatedModelConfig")]
+    partial class UpdatedModelConfig
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -28,10 +28,11 @@ namespace DAL.Migrations
             modelBuilder.Entity("DAL.Models.MstLoans", b =>
                 {
                     b.Property<string>("id")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("id");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("numeric")
+                        .HasColumnType("decimal(18,2)")
                         .HasColumnName("amount");
 
                     b.Property<string>("BorrowerId")
@@ -48,23 +49,25 @@ namespace DAL.Migrations
                         .HasColumnName("duration_month");
 
                     b.Property<decimal>("InterestRate")
-                        .HasColumnType("numeric")
+                        .HasColumnType("decimal(5,2)")
                         .HasColumnName("interest_rate");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
                         .HasColumnName("status");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
-                    b.HasKey("id");
+                    b.HasKey("id")
+                        .HasName("mst_loans_pkey");
 
                     b.HasIndex("BorrowerId");
 
-                    b.ToTable("mst_loans");
+                    b.ToTable("mst_loans", (string)null);
                 });
 
             modelBuilder.Entity("DAL.Models.MstUser", b =>
@@ -74,8 +77,12 @@ namespace DAL.Migrations
                         .HasColumnName("id");
 
                     b.Property<decimal>("Balance")
-                        .HasColumnType("numeric")
+                        .HasColumnType("decimal(18,2)")
                         .HasColumnName("balance");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -101,22 +108,27 @@ namespace DAL.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("role");
 
-                    b.HasKey("Id")
-                        .HasName("mst_user_pkey");
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
-                    b.ToTable("mst_user", (string)null);
+                    b.HasKey("Id")
+                        .HasName("mst_users_pkey");
+
+                    b.ToTable("mst_users", (string)null);
                 });
 
             modelBuilder.Entity("DAL.Models.TrnFunding", b =>
                 {
-                    b.Property<string>("id")
-                        .HasColumnType("text");
+                    b.Property<string>("Id")
+                        .HasColumnType("text")
+                        .HasColumnName("id");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("numeric")
+                        .HasColumnType("decimal(18,2)")
                         .HasColumnName("amount");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("FundedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("funded_at");
 
@@ -130,56 +142,105 @@ namespace DAL.Migrations
                         .HasColumnType("text")
                         .HasColumnName("loan_id");
 
-                    b.Property<string>("Loansid")
+                    b.HasKey("Id")
+                        .HasName("trn_funding_pkey");
+
+                    b.HasIndex("LenderId");
+
+                    b.HasIndex("LoanId");
+
+                    b.ToTable("trn_funding", (string)null);
+                });
+
+            modelBuilder.Entity("DAL.Models.TrnRepayment", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<decimal>("BalanceAmount")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("balance_amount");
+
+                    b.Property<string>("LoanId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("loan_id");
 
-                    b.Property<string>("UserId")
+                    b.Property<DateTime>("PaidAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("paid_at");
+
+                    b.Property<decimal>("RepaidAmount")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("repaid_amount");
+
+                    b.Property<string>("RepaidStatus")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("repaid_status");
 
-                    b.HasKey("id");
+                    b.HasKey("Id")
+                        .HasName("trn_repayment_pkey");
 
-                    b.HasIndex("Loansid");
+                    b.HasIndex("LoanId");
 
-                    b.HasIndex("UserId");
-
-                    b.ToTable("trn_funding");
+                    b.ToTable("trn_repayment", (string)null);
                 });
 
             modelBuilder.Entity("DAL.Models.MstLoans", b =>
                 {
-                    b.HasOne("DAL.Models.MstUser", "User")
-                        .WithMany("MstLoans")
+                    b.HasOne("DAL.Models.MstUser", "Borrower")
+                        .WithMany("BorrowedLoans")
                         .HasForeignKey("BorrowerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mst_loans_borrower");
 
-                    b.Navigation("User");
+                    b.Navigation("Borrower");
                 });
 
             modelBuilder.Entity("DAL.Models.TrnFunding", b =>
                 {
-                    b.HasOne("DAL.Models.MstLoans", "Loans")
-                        .WithMany()
-                        .HasForeignKey("Loansid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("DAL.Models.MstUser", "User")
                         .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("LenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_trn_funding_user");
+
+                    b.HasOne("DAL.Models.MstLoans", "Loans")
+                        .WithMany()
+                        .HasForeignKey("LoanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_trn_funding_loan");
 
                     b.Navigation("Loans");
 
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DAL.Models.TrnRepayment", b =>
+                {
+                    b.HasOne("DAL.Models.MstLoans", "Loan")
+                        .WithMany()
+                        .HasForeignKey("LoanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_trn_repayment_loan");
+
+                    b.Navigation("Loan");
+                });
+
             modelBuilder.Entity("DAL.Models.MstUser", b =>
                 {
-                    b.Navigation("MstLoans");
+                    b.Navigation("BorrowedLoans");
                 });
 #pragma warning restore 612, 618
         }

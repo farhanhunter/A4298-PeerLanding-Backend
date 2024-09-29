@@ -7,101 +7,95 @@ using System.Text;
 
 namespace BEPeer.Controllers
 {
-    [Route("rest/v1/loan[action]")]
+    [Route("rest/v1/loan")]
     [ApiController]
     public class LoanController : ControllerBase
     {
-        private readonly ILoanServices _loanServices;
+        private readonly ILoanService _loanService;
 
-        public LoanController(ILoanServices loanServices)
+        public LoanController(ILoanService loanService)
         {
-            _loanServices = loanServices;
+            _loanService = loanService;
         }
 
-        [HttpPost]
+        [HttpPost("register")]
         public async Task<IActionResult> Register(ReqLoanUserDto reqLoan)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                if (!ModelState.IsValid)
-                {
-                    var errors = ModelState
-                        .Where(x => x.Value.Errors.Any())
-                        .Select(x => new
-                        {
-                            Field = x.Key,
-                            Messages = x.Value.Errors.Select(e => e.ErrorMessage).ToList()
-                        }).ToList();
-                    var errorMessage = new StringBuilder("Validation errors occured!");
-                    return BadRequest(new ResBaseDto<object>
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Any())
+                    .Select(x => new
                     {
-                        Success = false,
-                        Message = errorMessage.ToString(),
-                        Data = errors
-                    });
-                }
-
-                var res = await _loanServices.CreateLoan(reqLoan);
-
-                return Ok(new ResBaseDto<string>
-                {
-                    Success = true,
-                    Message = res.ToString(),
-                    Data = res
-                });
-            }
-            catch (Exception ex)
-            {
-                if (ex.Message == "Email already used")
-                {
-                    return BadRequest(new ResBaseDto<object>
-                    {
-                        Success = false,
-                        Message = ex.Message,
-                        Data = null
-                    });
-                }
-                return StatusCode(StatusCodes.Status500InternalServerError, new ResBaseDto<string>
+                        Field = x.Key,
+                        Messages = x.Value.Errors.Select(e => e.ErrorMessage).ToList()
+                    }).ToList();
+                var errorMessage = new StringBuilder("Validation errors occurred!");
+                return BadRequest(new ResBaseDto<object>
                 {
                     Success = false,
-                    Message = ex.Message,
-                    Data = null
+                    Message = errorMessage.ToString(),
+                    Data = errors
                 });
             }
+
+            var result = await _loanService.CreateLoan(reqLoan);
+
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+
+            return Ok(result);
         }
-        [HttpPut("UpdateStatus/{borrowerId}")]
+
+        [HttpPut("update/{id}")]
         public async Task<IActionResult> UpdateLoan(string id, ReqUpdateLoanDto reqUpdateLoan)
         {
             if (string.IsNullOrEmpty(id))
             {
-                return BadRequest("Id or Status cannot be null or empty");
+                return BadRequest(new ResBaseDto<string>
+                {
+                    Success = false,
+                    Message = "Id cannot be null or empty",
+                    Data = null
+                });
             }
 
-            var result = await _loanServices.UpdateLoan(id, reqUpdateLoan);
+            var result = await _loanService.UpdateLoan(id, reqUpdateLoan);
 
-            if (result == "Loan not found")
+            if (!result.Success)
             {
                 return NotFound(result);
             }
 
             return Ok(result);
         }
-        [HttpGet("LoanList")]
+
+        [HttpGet("list")]
         public async Task<IActionResult> GetLoanList([FromQuery] string status = null)
         {
-            var loans = await _loanServices.GetLoans(status);
+            var result = await _loanService.GetLoans(status);
 
-            if (loans == null || loans.Count == 0)
+            if (!result.Success)
             {
-                return NotFound("No loans found");
+                return NotFound(result);
             }
 
-            return Ok(new
+            return Ok(result);
+        }
+
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAllLoans()
+        {
+            var result = await _loanService.LoanList();
+
+            if (!result.Success)
             {
-                success = true,
-                message = "Success load loan",
-                data = loans
-            });
+                return NotFound(result);
+            }
+
+            return Ok(result);
         }
     }
 }

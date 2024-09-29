@@ -15,6 +15,7 @@ namespace DAL.DTO.Req
 
         [Required(ErrorMessage = "Email is required")]
         [MaxLength(50, ErrorMessage = "Email can't be more than 50 characters")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
         public string Email { get; set; }
 
         [Required(ErrorMessage = "Password is required")]
@@ -23,7 +24,7 @@ namespace DAL.DTO.Req
         public string Password { get; set; }
 
         [Required(ErrorMessage = "Role is required")]
-        [MaxLength(30, ErrorMessage = "Role can't be more than 30 characters")]
+        [RegularExpression("^(borrower|lender)$", ErrorMessage = "Role must be either 'borrower' or 'lender'")]
         public string Role { get; set; }
 
         [Range(0, double.MaxValue, ErrorMessage = "Balance must be a positive number")]

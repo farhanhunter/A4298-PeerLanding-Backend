@@ -8,6 +8,10 @@ namespace DAL.DTO.Req
 {
     public class ReqUpdateLoanDto
     {
-        public string status {  get; set; }
+        public string Id { get; set; }
+        public string Status { get; set; }
+        public decimal? Amount { get; set; }
+        public decimal? InterestRate { get; set; }
+        public int? Duration { get; set; }
     }
 }

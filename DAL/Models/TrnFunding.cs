@@ -12,15 +12,16 @@ namespace DAL.Models
     public class TrnFunding
     {
         [Key]
-        public string id { get; set; } = Guid.NewGuid().ToString();
+        [Column("id")]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
-        [ForeignKey("MstLoans")]
+        [ForeignKey("Loans")]
         [Column("loan_id")]
         public string LoanId { get; set; }
 
         [Required]
-        [ForeignKey("MstUser")]
+        [ForeignKey("User")]
         [Column("lender_id")]
         public string LenderId { get; set; }
 
@@ -30,10 +31,10 @@ namespace DAL.Models
 
         [Required]
         [Column("funded_at")]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime FundedAt { get; set; } = DateTime.UtcNow;
 
-        public MstUser User { get; set; }
-
-        public MstLoans Loans { get; set; }
+        public virtual MstUser User { get; set; }
+        public virtual MstLoans Loans { get; set; }
     }
+
 }
