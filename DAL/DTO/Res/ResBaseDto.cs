@@ -12,11 +12,22 @@ namespace DAL.DTO.Res
         public object Message { get; set; }
         public T Data { get; set; }
 
+        public int StatusCode { get; set; }
+
         public ResBaseDto()
         {
-            Success = false;
+            Success = true;
             Message = string.Empty;
             Data = default;
+            StatusCode = 200;
+        }
+
+        public ResBaseDto(bool success, object message, T data, int statusCode)
+        {
+            Success = success;
+            Message = message;
+            Data = data;
+            StatusCode = statusCode;
         }
 
         public void SetMessage(string message)

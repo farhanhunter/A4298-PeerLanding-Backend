@@ -13,28 +13,90 @@ namespace BEPeer.Controllers
     public class LenderController : ControllerBase
     {
         private readonly ILenderServices _lenderServices;
+        private readonly ILogger<LenderController> _logger;
 
-        public LenderController(ILenderServices lenderServices)
+        public LenderController(ILenderServices lenderServices, ILogger<LenderController>logger)
         {
             _lenderServices = lenderServices;
+            _logger = logger;
         }
 
         private string GetLenderId()
         {
-            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        }
+            _logger.LogInformation("Entering GetLenderId method");
 
-        [HttpGet("balance")]
-        public async Task<ActionResult<decimal>> GetBalance()
-        {
-            var lenderId = GetLenderId();
-            if (string.IsNullOrEmpty(lenderId))
+            if (User == null || !User.Identity.IsAuthenticated)
             {
-                return Unauthorized();
+                _logger.LogWarning("User is null or not authenticated");
+                return null;
             }
 
-            var balance = await _lenderServices.GetBalance(lenderId);
-            return Ok(balance);
+            _logger.LogInformation("User claims:");
+            foreach (var claim in User.Claims)
+            {
+                _logger.LogInformation($"Type: {claim.Type}, Value: {claim.Value}");
+            }
+
+            var lenderId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            _logger.LogInformation($"Extracted Lender ID from token: {lenderId ?? "null"}");
+
+            if (string.IsNullOrEmpty(lenderId))
+            {
+                _logger.LogWarning("Lender ID not found in claims");
+            }
+
+            return lenderId;
+        }
+
+
+        [HttpGet("balance")]
+        [Authorize(Roles = "Lender")]
+        public async Task<ActionResult<ResBaseDto<ResUserDto>>> GetBalance()
+        {
+            _logger.LogInformation("Entering GetBalance method");
+
+            var token = HttpContext.Request.Headers["Authorization"].FirstOrDefault()?.Split(" ").Last();
+            _logger.LogInformation($"Received token: {token}");
+
+            var lenderId = GetLenderId();
+            _logger.LogInformation($"Lender ID from token: {lenderId ?? "null"}");
+            if (string.IsNullOrEmpty(lenderId))
+            {
+                _logger.LogWarning("Lender ID is null or empty");
+                return Unauthorized(new ResBaseDto<ResUserDto>
+                {
+                    Success = false,
+                    Message = "Unauthorized access",
+                    Data = null,
+                    StatusCode = 401
+                });
+            }
+            var result = await _lenderServices.GetBalance(lenderId);
+            _logger.LogInformation($"GetBalance result: {result.Success}, Message: {result.Message}");
+
+            if (result.Success)
+            {
+                var response = new ResBaseDto<ResUserDto>
+                {
+                    Success = true,
+                    Message = "Balance retrieved successfully",
+                    Data = new ResUserDto { Balance = result.Data.Balance },
+                    StatusCode = 200
+                };
+                return Ok(response);
+            }
+            else
+            {
+                var statusCode = result.StatusCode != 0 ? result.StatusCode : 400;
+                var response = new ResBaseDto<ResUserDto>
+                {
+                    Success = false,
+                    Message = result.Message,
+                    Data = null,
+                    StatusCode = statusCode
+                };
+                return StatusCode(statusCode, response);
+            }
         }
 
         [HttpPost("balance/update")]

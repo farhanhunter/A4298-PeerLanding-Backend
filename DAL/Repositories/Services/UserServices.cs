@@ -135,13 +135,22 @@ namespace DAL.Repositories.Services
             var secretKey = jwtSettings["SecretKey"];
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-            var claims = new[]
+
+            var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()), // Tambahkan ini untuk ID lender
+        new Claim(ClaimTypes.Email, user.Email),
+        new Claim(ClaimTypes.Name, user.Name),
+        new Claim(ClaimTypes.Role, user.Role),
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+    };
+
+            _logger.LogInformation("Generating JWT token with claims:");
+            foreach (var claim in claims)
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Email),
-                new Claim(ClaimTypes.Name, user.Name),
-                new Claim(ClaimTypes.Role, user.Role),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
+                _logger.LogInformation($"Claim: {claim.Type} = {claim.Value}");
+            }
+
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["ValidIssuer"],
                 audience: jwtSettings["ValidAudience"],
@@ -150,8 +159,12 @@ namespace DAL.Repositories.Services
                 signingCredentials: credentials
             );
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+            _logger.LogInformation($"Generated JWT token: {tokenString}");
+
+            return tokenString;
         }
+
 
         public async Task<ResUserDto> GetUserById(string id)
         {

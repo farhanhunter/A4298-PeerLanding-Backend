@@ -10,7 +10,7 @@ namespace DAL.Repositories.Services.Interfaces
 {
     public interface ILenderServices
     {
-        Task<decimal> GetBalance(string lenderId);
+        Task<ResBaseDto<ResUserDto>> GetBalance(string lenderId);
         Task<string> UpdateBalance(ReqUpdateBalanceDto reqUpdateBalance);
         Task<List<ResListLoanDto>> GetLoanRequest();
         Task<string> UpdateLoanStatus(string loanId, string newStatus);

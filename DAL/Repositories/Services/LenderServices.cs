@@ -3,6 +3,7 @@ using DAL.DTO.Res;
 using DAL.Models;
 using DAL.Repositories.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,10 +15,12 @@ namespace DAL.Repositories.Services
     public class LenderServices : ILenderServices
     {
         private readonly P2plandingContext _context;
+        private readonly ILogger<LenderServices> _logger;
 
-        public LenderServices(P2plandingContext context)
+        public LenderServices(P2plandingContext context, ILogger<LenderServices> logger)
         {
             _context = context;
+            _logger = logger;
         }
         public async Task<string> ApproveLoan(string loanId, string lenderId)
         {
@@ -65,11 +68,44 @@ namespace DAL.Repositories.Services
         }
 
 
-        public async Task<decimal> GetBalance(string lenderId)
+        public async Task<ResBaseDto<ResUserDto>> GetBalance(string lenderId)
         {
-            var lender = await _context.MstUsers.FindAsync(lenderId);
-            return lender?.Balance ?? 0;
+            _logger.LogInformation($"Searching for lender with ID: {lenderId}");
+            var query = _context.MstUsers.Where(u => u.Id == lenderId);
+            _logger.LogInformation($"SQL Query: {query.ToQueryString()}");
+            var lender = await query
+            .Select(u => new ResUserDto
+            {
+                Id = u.Id,
+                Name = u.Name,
+                Email = u.Email,
+                Balance = u.Balance
+            })
+            .FirstOrDefaultAsync();
+
+            _logger.LogInformation($"Lender found: {lender != null}");
+
+            if (lender == null)
+            {
+                return new ResBaseDto<ResUserDto>
+                {
+                    Success = false,
+                    Message = "Lender not found",
+                    Data = null,
+                    StatusCode = 404
+                };
+            }
+
+            return new ResBaseDto<ResUserDto>
+            {
+                Success = true,
+                Message = "Lender balance retrieved successfully",
+                Data = lender,
+                StatusCode = 200
+            };
+
         }
+
         public async Task<List<ResLoanHistoryDto>> GetLoanHistory(string lenderId)
         {
             return await _context.TrnFundings
