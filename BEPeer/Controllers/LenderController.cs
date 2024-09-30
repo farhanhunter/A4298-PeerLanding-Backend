@@ -49,6 +49,7 @@ namespace BEPeer.Controllers
         }
 
 
+
         [HttpGet("balance")]
         [Authorize(Roles = "Lender")]
         public async Task<ActionResult<ResBaseDto<ResUserDto>>> GetBalance()

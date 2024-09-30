@@ -138,7 +138,7 @@ namespace DAL.Repositories.Services
 
             var claims = new List<Claim>
     {
-        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()), // Tambahkan ini untuk ID lender
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
         new Claim(ClaimTypes.Email, user.Email),
         new Claim(ClaimTypes.Name, user.Name),
         new Claim(ClaimTypes.Role, user.Role),
@@ -164,6 +164,7 @@ namespace DAL.Repositories.Services
 
             return tokenString;
         }
+
 
 
         public async Task<ResUserDto> GetUserById(string id)
